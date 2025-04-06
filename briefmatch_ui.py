@@ -30,7 +30,10 @@ STOP_WORDS = {
 
 # Load brief data
 with open("sample_briefs.json", "r") as f:
-    brief_pairs = json.load(f)
+    all_briefs = json.load(f)
+
+# Filter for only the test split
+brief_pairs = [pair for pair in all_briefs if pair.get("split") == "test"]
 
 def highlight_common_terms(text1, text2):
     def get_keywords(text):
@@ -61,28 +64,29 @@ def analyze_briefs(moving_json, response_json, top_n):
         res.raise_for_status()
         data = res.json()
 
-        elapsed = time.time() - start_time  # define here
+        elapsed = time.time() - start_time
 
         plain_html = f"<h3>Top Matches (Brief {data['moving_brief_id']} vs {data['response_brief_id']})</h3><ul>"
         highlighted_html = f"<h3>Top Matches (Brief {data['moving_brief_id']} vs {data['response_brief_id']})</h3><ul>"
 
-        for link in data["top_links"]:
+        for i, link in enumerate(data["top_links"], 1):
             m_content_h, r_content_h = highlight_common_terms(link["moving_content"], link["response_content"])
             m_content_p = link["moving_content"]
             r_content_p = link["response_content"]
 
-            block_template = lambda m_heading, m_text, r_heading, r_text: f"""
+            block_template = lambda match_id, m_heading, m_text, r_heading, r_text, score: f"""
                 <li>
+                    <strong style="font-size: 1.1em;">🔗 Match #{match_id}</strong><br><br>
                     <strong>🔹 Moving Heading:</strong> {m_heading}<br>
                     <div style="margin-left: 1em; color: darkblue;">{m_text}</div><br>
                     <strong>🔸 Response Heading:</strong> {r_heading}<br>
                     <div style="margin-left: 1em; color: darkgreen;">{r_text}</div><br>
-                    <strong>🔗 Score:</strong> {link['score'] * 100:.1f}%
+                    <strong>🧮 Score:</strong> {score:.1f}%
                 </li><hr>
             """
 
-            plain_html += block_template(link['moving_heading'], m_content_p, link['response_heading'], r_content_p)
-            highlighted_html += block_template(link['moving_heading'], m_content_h, link['response_heading'], r_content_h)
+            plain_html += block_template(i, link['moving_heading'], m_content_p, link['response_heading'], r_content_p, link['score'] * 100)
+            highlighted_html += block_template(i, link['moving_heading'], m_content_h, link['response_heading'], r_content_h, link['score'] * 100)
 
         plain_html += "</ul>"
         highlighted_html += "</ul>"
