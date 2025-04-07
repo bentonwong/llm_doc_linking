@@ -4,11 +4,17 @@ from .models import BriefPairRequest, BriefPairResult, LinkResult
 from .utils import cosine_similarity
 from .config import OPENAI_API_KEY
 
+if not OPENAI_API_KEY:
+    raise ValueError("OPENAI_API_KEY is not set. Please check your environment variables.")
+
 openai.api_key = OPENAI_API_KEY
 
 def embed_text(text: str, model: str = "text-embedding-3-large") -> List[float]:
-    response = openai.embeddings.create(input=[text], model=model)
-    return response.data[0].embedding
+    try:
+        response = openai.embeddings.create(input=[text], model=model)
+        return response.data[0].embedding
+    except Exception as e:
+        raise RuntimeError(f"Embedding failed for input: {text[:60]}... \nError: {e}")
 
 def process_brief_pair(brief_data: BriefPairRequest) -> BriefPairResult:
     moving_args = brief_data.moving_brief.brief_arguments
@@ -19,6 +25,7 @@ def process_brief_pair(brief_data: BriefPairRequest) -> BriefPairResult:
     moving_data = []
     for arg in moving_args:
         full_text = f"{arg.heading}\n\n{arg.content}"
+        full_text = full_text[:8000]
         embedding = embed_text(full_text)
         moving_data.append({
             "heading": arg.heading,
