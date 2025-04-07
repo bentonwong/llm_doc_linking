@@ -6,3 +6,4 @@ pydantic
 numpy
 requests
 python-dotenv
+matplotlib
